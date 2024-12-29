@@ -1,9 +1,12 @@
 shader_type canvas_item;
 render_mode blend_disabled;
 
-uniform sampler2D previousFrame : source_color, hint_screen_texture;
+//uniform sampler2D previousFrame : source_color, hint_screen_texture;
+uniform sampler2D previousFrame : source_color;
+uniform float fadeSpeed;
 uniform vec4 cameraQuat;
 uniform bool clear;
+uniform float deltaTime;
 
 void vertex() {
 	// Called for every vertex the material is visible on.
@@ -78,6 +81,11 @@ float hash(in vec4 a) {
 	return sin(dot(a, vec4(827972.0, 137828.0, 894827.0, 198925.0)));
 }
 
+float moveTowards(float current, float target, float amount) {
+	if(abs(current - target) < amount) return target;
+	return current + sign(target - current) * amount;
+}
+
 void fragment() {
 	// Called for every pixel the material is visible on.
 	if(clear) {
@@ -86,23 +94,30 @@ void fragment() {
 		vec4 prev = texture(previousFrame, UV);
 		vec3 dir = normalize(uvToDir(UV));
 		vec3 lookDir = quatXform(cameraQuat, vec3(0.0, 0.0, -1.0));
-		if(dot(dir, lookDir) > 0.0) { // pixel is visible
-			vec4 directQuat = quatBetween(vec3(0,0,-1), dir);
-			vec2 prevRot = prev.xy*2.0 - 1.0;
-			float prevRotLen = length(prevRot);
-			prevRot = prevRotLen < 1e-8 ? vec2(0,1) : prevRot / prevRotLen;
-			vec4 prevQuat = quatMult(directQuat, vec4(0, 0, prevRot));
-			vec4 currentQuat = quatMult(quatBetween(lookDir, dir), cameraQuat);
-			float side = round(prev.z);
-			//if(dot(prevQuat, currentQuat)*10.0 < hash(vec4(dir, TIME))) {
-			if(dot(prevQuat, currentQuat) < -0.2) {
-				side = 1.0-side;
-			}
-			vec2 nextRot = normalize(quatMult(quatConj(directQuat), currentQuat).zw);
-			COLOR = vec4(nextRot, side, 1.0);
-		} else { // pixel is not visible
-			COLOR = prev;
+		vec4 directQuat = quatBetween(vec3(0,0,-1), dir);
+		vec2 prevRot = prev.xy*2.0 - 1.0;
+		float prevRotLen = length(prevRot);
+		prevRot = prevRotLen < 1e-8 ? vec2(0,1) : prevRot / prevRotLen;
+		vec4 prevQuat = quatMult(directQuat, vec4(0, 0, prevRot));
+		vec4 currentQuat = quatMult(quatBetween(lookDir, dir), cameraQuat);
+		float nextSide = prev.z;
+		//if(dot(prevQuat, currentQuat)*10.0 < hash(vec4(dir, TIME))) {
+		if(dot(prevQuat, currentQuat) < -0.2) {
+			nextSide = 1.0-nextSide;
 		}
+		vec2 nextRot = normalize(quatMult(quatConj(directQuat), currentQuat).zw);
+
+		vec3 nextColor;
+		if(dot(dir, lookDir) > 0.0) { // pixel is visible
+			nextColor = vec3(nextRot, nextSide);
+		} else { // pixel is not visible
+			nextColor = prev.xyz;
+		}
+		vec3 prevCenter = texture(previousFrame, dirToUV(lookDir)).xyz;
+		vec3 fadeToColor = vec3(nextRot, round(prevCenter.z));
+		float fadeAmount = fadeSpeed * deltaTime;
+		COLOR = vec4(normalize(mix(nextColor.xy, fadeToColor.xy, fadeAmount)),
+				moveTowards(nextColor.z, fadeToColor.z, fadeAmount), 1.0);
 	}
 	//COLOR = vec4(fract(prev.rgb + vec3(0.1, 0.2, 0.3)/60.0), 1.0);
 	//COLOR = vec4(dirToUV(uvToDir(UV)), 0.0, 1.0);

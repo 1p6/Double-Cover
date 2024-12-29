@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://7ly7a6m36fdp"]
+[gd_scene load_steps=16 format=3 uid="uid://7ly7a6m36fdp"]
 
 [ext_resource type="Script" path="res://rendering.gd" id="1_j8ejl"]
 [ext_resource type="Shader" path="res://main.gdshader" id="1_rlp0l"]
@@ -22,11 +22,17 @@ shader_parameter/worldA = SubResource("ViewportTexture_rklwj")
 shader_parameter/worldB = SubResource("ViewportTexture_d6kdv")
 shader_parameter/quatShader = SubResource("ViewportTexture_0nl7y")
 
+[sub_resource type="ViewportTexture" id="ViewportTexture_0nt08"]
+viewport_path = NodePath("Rendering/Quaternion")
+
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_30cst"]
 resource_local_to_scene = true
 shader = ExtResource("3_medhl")
+shader_parameter/fadeSpeed = 1.0
 shader_parameter/cameraQuat = null
 shader_parameter/clear = null
+shader_parameter/deltaTime = null
+shader_parameter/previousFrame = SubResource("ViewportTexture_0nt08")
 
 [sub_resource type="GDScript" id="GDScript_wv30x"]
 script/source = "extends CharacterBody3D

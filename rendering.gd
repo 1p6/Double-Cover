@@ -13,4 +13,5 @@ func _ready() -> void:
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
+	($Quaternion/ColorRect.material as ShaderMaterial).set_shader_parameter('deltaTime', delta);
 	pass

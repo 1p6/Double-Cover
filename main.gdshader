@@ -6,6 +6,8 @@ uniform sampler2D worldB : source_color;
 uniform sampler2D quatShader : source_color, filter_nearest;
 uniform mat3 camTransform;
 
+varying vec3 posLinear;
+
 vec2 dirToUV(in vec3 dir) {
 	vec3 mag = abs(dir);
 	float part;
@@ -25,12 +27,13 @@ vec2 dirToUV(in vec3 dir) {
 
 void vertex() {
 	// Called for every vertex the material is visible on.
+	posLinear = camTransform * vec3(UV*2.0-1.0, 1.0);
 }
 
 void fragment() {
 	// Called for every pixel the material is visible on.
-	vec3 pos = normalize(camTransform * vec3(UV*2.0-1.0, 1.0));
-	float side = round(texture(quatShader, dirToUV(pos)).z);
+	vec3 pos = normalize(posLinear);
+	float side = texture(quatShader, dirToUV(pos)).z;
 	vec4 aColor = texture(worldA, UV);
 	//vec4 aColor = vec4(vec3(texture(quatShader, dirToUV(pos)).z), 1.0);
 	//vec4 aColor = texture(quatShader, dirToUV(pos));
