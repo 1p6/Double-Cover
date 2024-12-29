@@ -1,4 +1,5 @@
 shader_type canvas_item;
+render_mode blend_disabled;
 
 uniform sampler2D worldA : source_color;
 uniform sampler2D worldB : source_color;
@@ -29,12 +30,14 @@ void vertex() {
 void fragment() {
 	// Called for every pixel the material is visible on.
 	vec3 pos = normalize(camTransform * vec3(UV*2.0-1.0, 1.0));
-	//vec4 aColor = texture(worldA, UV);
-	vec4 aColor = texture(quatShader, dirToUV(pos));
+	float side = round(texture(quatShader, dirToUV(pos)).z);
+	vec4 aColor = texture(worldA, UV);
+	//vec4 aColor = vec4(vec3(texture(quatShader, dirToUV(pos)).z), 1.0);
+	//vec4 aColor = texture(quatShader, dirToUV(pos));
 	//vec4 aColor = vec4(vec3(max(dot(sin(pos*32.0), vec3(1.0)), 0.0)*pos)/2.0+0.5, 1.0);
 	//vec4 aColor = vec4(vec3(pos.y)/2.0+0.5, 1.0);
 	vec4 bColor = texture(worldB, UV);
-	COLOR = mix(aColor, bColor, round(UV.x));
+	COLOR = mix(aColor, bColor, side);
 }
 
 //void light() {

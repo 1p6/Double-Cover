@@ -1,7 +1,9 @@
 shader_type canvas_item;
+render_mode blend_disabled;
 
-uniform sampler2D previousFrame : source_color;
+uniform sampler2D previousFrame : source_color, hint_screen_texture;
 uniform vec4 cameraQuat;
+uniform bool clear;
 
 void vertex() {
 	// Called for every vertex the material is visible on.
@@ -43,12 +45,69 @@ vec2 dirToUV(in vec3 dir) {
 	return ((dir.yz/max(mag.x, 1e-6)+1.0)/2.0 + vec2(part, (sign(dir.x)+1.0)/2.0)) / vec2(3.0, 2.0);
 }
 
+vec4 quatBetween(in vec3 from, in vec3 to) {
+	// from https://github.com/godotengine/godot/blob/75ce4266c4774b30ed5df67e6c43365418fcce5f/core/math/quaternion.h#L143
+	vec3 c = cross(from, to);
+	float d = dot(from, to);
+
+	if(d < 1e-8 - 1.0) {
+		return vec4(0, 1, 0, 0);
+	} else {
+		float s = sqrt((1.0 + d) * 2.0);
+		float rs = 1.0 / s;
+		return vec4(c*rs, s * 0.5);
+	}
+}
+
+vec3 quatXform(in vec4 quat, in vec3 pos) {
+	// from https://github.com/godotengine/godot/blob/75ce4266c4774b30ed5df67e6c43365418fcce5f/core/math/quaternion.h#L90
+	vec3 uv = cross(quat.xyz, pos);
+	return pos + ((uv * quat.w) + cross(quat.xyz, uv)) * 2.0;
+}
+
+vec4 quatMult(in vec4 a, in vec4 b) {
+	return vec4(a.w * b.xyz + a.xyz * b.w + cross(a.xyz, b.xyz),
+				a.w * b.w - dot(a.xyz, b.xyz));
+}
+
+vec4 quatConj(in vec4 a) {
+	return vec4(-a.xyz, a.w);
+}
+
+float hash(in vec4 a) {
+	return sin(dot(a, vec4(827972.0, 137828.0, 894827.0, 198925.0)));
+}
+
 void fragment() {
 	// Called for every pixel the material is visible on.
-	vec4 prev = round(texture(previousFrame, UV));
+	if(clear) {
+		COLOR = vec4(0.5, 1, 0, 1);
+	} else {
+		vec4 prev = texture(previousFrame, UV);
+		vec3 dir = normalize(uvToDir(UV));
+		vec3 lookDir = quatXform(cameraQuat, vec3(0.0, 0.0, -1.0));
+		if(dot(dir, lookDir) > 0.0) { // pixel is visible
+			vec4 directQuat = quatBetween(vec3(0,0,-1), dir);
+			vec2 prevRot = prev.xy*2.0 - 1.0;
+			float prevRotLen = length(prevRot);
+			prevRot = prevRotLen < 1e-8 ? vec2(0,1) : prevRot / prevRotLen;
+			vec4 prevQuat = quatMult(directQuat, vec4(0, 0, prevRot));
+			vec4 currentQuat = quatMult(quatBetween(lookDir, dir), cameraQuat);
+			float side = round(prev.z);
+			//if(dot(prevQuat, currentQuat)*10.0 < hash(vec4(dir, TIME))) {
+			if(dot(prevQuat, currentQuat) < -0.2) {
+				side = 1.0-side;
+			}
+			vec2 nextRot = normalize(quatMult(quatConj(directQuat), currentQuat).zw);
+			COLOR = vec4(nextRot, side, 1.0);
+		} else { // pixel is not visible
+			COLOR = prev;
+		}
+	}
+	//COLOR = vec4(fract(prev.rgb + vec3(0.1, 0.2, 0.3)/60.0), 1.0);
 	//COLOR = vec4(dirToUV(uvToDir(UV)), 0.0, 1.0);
 	//COLOR = vec4(fract(VERTEX/2.0)*2.0, 0.0, 1.0);
-	COLOR = vec4(normalize(uvToDir(UV))/2.0+0.5, 1.0);
+	//COLOR = vec4(normalize(uvToDir(UV))/2.0+0.5, 1.0);
 }
 
 //void light() {
