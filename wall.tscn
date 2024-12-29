@@ -1,0 +1,32 @@
+[gd_scene load_steps=4 format=3 uid="uid://b5o753f30myfi"]
+
+[sub_resource type="GDScript" id="GDScript_fluxw"]
+script/source = "@tool
+extends StaticBody3D
+
+@export_flags('A', 'B') var sides: int = 3:
+	set(newVal):
+		sides = newVal
+		$MeshInstance3D.layers = sides
+
+@export var size: Vector3 = Vector3.ONE:
+	set(newVal):
+		size = newVal
+		$MeshInstance3D.scale = size
+		($CollisionShape3D.shape as BoxShape3D).size = size
+"
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_fhmfq"]
+resource_local_to_scene = true
+
+[sub_resource type="BoxMesh" id="BoxMesh_jpfhf"]
+
+[node name="Wall" type="StaticBody3D"]
+script = SubResource("GDScript_fluxw")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_fhmfq")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+layers = 3
+mesh = SubResource("BoxMesh_jpfhf")

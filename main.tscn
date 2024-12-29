@@ -1,0 +1,238 @@
+[gd_scene load_steps=16 format=3 uid="uid://7ly7a6m36fdp"]
+
+[ext_resource type="Script" path="res://rendering.gd" id="1_j8ejl"]
+[ext_resource type="Shader" path="res://main.gdshader" id="1_rlp0l"]
+[ext_resource type="Shader" path="res://quaternion.gdshader" id="3_medhl"]
+[ext_resource type="PackedScene" uid="uid://b5o753f30myfi" path="res://wall.tscn" id="3_q5oyi"]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_0nl7y"]
+viewport_path = NodePath("Rendering/Quaternion")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_rklwj"]
+viewport_path = NodePath("Rendering/World A")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_d6kdv"]
+viewport_path = NodePath("Rendering/World B")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_a1db4"]
+resource_local_to_scene = true
+shader = ExtResource("1_rlp0l")
+shader_parameter/camTransform = Basis(0.05, 0, 0, 0, -0.05, 0, 0, 0, -0.05)
+shader_parameter/worldA = SubResource("ViewportTexture_rklwj")
+shader_parameter/worldB = SubResource("ViewportTexture_d6kdv")
+shader_parameter/quatShader = SubResource("ViewportTexture_0nl7y")
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_q2f7g"]
+viewport_path = NodePath("Rendering/Quaternion")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_30cst"]
+resource_local_to_scene = true
+shader = ExtResource("3_medhl")
+shader_parameter/cameraQuat = null
+shader_parameter/previousFrame = SubResource("ViewportTexture_q2f7g")
+
+[sub_resource type="GDScript" id="GDScript_wv30x"]
+script/source = "extends CharacterBody3D
+
+
+const SPEED = 8.0
+const ACCEL = 16.0
+const JUMP_VELOCITY = 7.5
+const SENSITIVITY = 1.0/200
+
+@onready var cameraPos: Node3D = $\"Camera Pos\"
+
+var pitch: float = 0.0
+var yaw: float = 0.0
+var orig_pos: Vector3
+
+func getLookQuat() -> Quaternion:
+	return Quaternion(Vector3.UP, -yaw)*Quaternion(Vector3.RIGHT, -pitch)
+
+func _ready() -> void:
+	#$MeshInstance3D.queue_free()
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	orig_pos = position
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion:
+		yaw += event.relative.x * SENSITIVITY
+		pitch += event.relative.y * SENSITIVITY
+		cameraPos.quaternion = getLookQuat()
+	elif event.is_action(\"quit\"):
+		get_tree().quit()
+	elif event.is_action(\"reset\"):
+		position = orig_pos
+
+func _physics_process(delta: float) -> void:
+	# Add the gravity.
+	if not is_on_floor():
+		velocity += get_gravity() * delta
+
+	# Handle jump.
+	if Input.is_action_just_pressed(\"ui_accept\") and is_on_floor():
+		velocity.y = JUMP_VELOCITY
+
+	# Get the input direction and handle the movement/deceleration.
+	# As good practice, you should replace UI actions with custom gameplay actions.
+	var input_dir := Input.get_vector(\"move_left\", \"move_right\", \"move_forward\", \"move_backward\")
+	var desired := (SPEED * Vector3(input_dir.x, 0, input_dir.y)
+			.rotated(Vector3.UP, -yaw).normalized())
+	var diff := desired - velocity * Vector3(1.0, 0.0, 1.0)
+	velocity += diff.limit_length(ACCEL*delta)
+
+	move_and_slide()
+"
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_8c6yi"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_2u012"]
+
+[sub_resource type="GDScript" id="GDScript_x4wxa"]
+script/source = "@tool
+extends Node3D
+
+@export var cameraA: Camera3D
+@export var cameraB: Camera3D
+@export var viewRect: ColorRect
+@export var quatRect: ColorRect
+@export var fov: float = 90:
+	set(val):
+		fov = val
+		updateCameraFOVs()
+
+func updateCameraFOVs():
+	cameraA.fov = fov
+	cameraB.fov = fov
+
+# Called when the node enters the scene tree for the first time.
+func _ready() -> void:
+	updateCameraFOVs()
+	pass # Replace with function body.
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(delta: float) -> void:
+	cameraA.transform = global_transform
+	cameraB.transform = global_transform
+	var proj := cameraA.get_camera_projection()
+	var vpext := proj.get_viewport_half_extents()
+	var near := proj.get_z_near()
+	(viewRect.material as ShaderMaterial).set_shader_parameter(&'camTransform',
+			cameraA.basis * Basis.from_scale(Vector3(vpext.x, -vpext.y, -near)))
+	(quatRect.material as ShaderMaterial).set_shader_parameter(&'cameraQuat',
+			Quaternion() if Engine.is_editor_hint() else $\"..\".getLookQuat())
+	pass
+"
+
+[sub_resource type="Environment" id="Environment_f8qqs"]
+background_mode = 1
+ambient_light_source = 3
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.0
+reflected_light_source = 1
+
+[node name="Main" type="Node3D"]
+
+[node name="Rendering" type="Node" parent="."]
+script = ExtResource("1_j8ejl")
+
+[node name="View" type="ColorRect" parent="Rendering"]
+material = SubResource("ShaderMaterial_a1db4")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="World A" type="SubViewport" parent="Rendering"]
+
+[node name="Camera3D" type="Camera3D" parent="Rendering/World A"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.04016, 0)
+cull_mask = 1048573
+fov = 90.0
+
+[node name="World B" type="SubViewport" parent="Rendering"]
+
+[node name="Camera3D" type="Camera3D" parent="Rendering/World B"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.04016, 0)
+cull_mask = 1048574
+fov = 90.0
+
+[node name="Quaternion" type="SubViewport" parent="Rendering"]
+disable_3d = true
+size = Vector2i(768, 512)
+
+[node name="ColorRect" type="ColorRect" parent="Rendering/Quaternion"]
+material = SubResource("ShaderMaterial_30cst")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="CharacterBody3D" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.48842, 0)
+script = SubResource("GDScript_wv30x")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CharacterBody3D"]
+shape = SubResource("CapsuleShape3D_8c6yi")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CharacterBody3D"]
+layers = 3
+mesh = SubResource("CapsuleMesh_2u012")
+
+[node name="Camera Pos" type="Node3D" parent="CharacterBody3D" node_paths=PackedStringArray("cameraA", "cameraB", "viewRect", "quatRect")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.551736, 0)
+script = SubResource("GDScript_x4wxa")
+cameraA = NodePath("../../Rendering/World A/Camera3D")
+cameraB = NodePath("../../Rendering/World B/Camera3D")
+viewRect = NodePath("../../Rendering/View")
+quatRect = NodePath("../../Rendering/Quaternion/ColorRect")
+
+[node name="Wall" parent="." instance=ExtResource("3_q5oyi")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00219786, -0.011579, 0.00607252)
+size = Vector3(12.27, 1, 12.435)
+
+[node name="Wall2" parent="." instance=ExtResource("3_q5oyi")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.74717, 1.19201, 0.94886)
+sides = 2
+
+[node name="Wall3" parent="." instance=ExtResource("3_q5oyi")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.2473, 1.24265, -2.37043)
+
+[node name="Lighting" type="Node3D" parent="."]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Lighting"]
+transform = Transform3D(0.728957, 0.405172, -0.551777, -5.2079e-09, 0.806032, 0.591872, 0.68456, -0.431449, 0.587563, -7.51673, 4.41572, 8.26045)
+layers = 3
+light_energy = 2.0
+light_bake_mode = 0
+shadow_enabled = true
+sky_mode = 1
+
+[node name="DirectionalLight3D2" type="DirectionalLight3D" parent="Lighting"]
+transform = Transform3D(-0.94335, -0.196382, 0.26744, 1.51936e-08, 0.806032, 0.591872, -0.331799, 0.558343, -0.76037, 9.59708, 4.41572, -8.05412)
+layers = 3
+light_color = Color(0.866667, 0, 1, 1)
+light_energy = 0.02
+light_bake_mode = 0
+shadow_enabled = true
+sky_mode = 1
+
+[node name="OmniLight3D" type="OmniLight3D" parent="Lighting"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.27575, 2.45378, -2.52495)
+light_color = Color(1, 0, 0, 1)
+light_energy = 2.0
+light_cull_mask = 4294967293
+shadow_enabled = true
+
+[node name="OmniLight3D2" type="OmniLight3D" parent="Lighting"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0679, 2.45378, 3.2344)
+layers = 2
+light_color = Color(0, 0, 1, 1)
+light_energy = 2.0
+light_cull_mask = 4294967294
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Lighting"]
+environment = SubResource("Environment_f8qqs")
