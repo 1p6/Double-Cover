@@ -86,6 +86,10 @@ float moveTowards(float current, float target, float amount) {
 	return current + sign(target - current) * amount;
 }
 
+vec3 mixCube(vec3 a, vec3 b, float amount) {
+	return vec3(normalize(mix(a.xy, b.xy, amount)), mix(a.z, b.z, amount));
+}
+
 void fragment() {
 	// Called for every pixel the material is visible on.
 	if(clear) {
@@ -102,19 +106,22 @@ void fragment() {
 		vec4 currentQuat = quatMult(quatBetween(lookDir, dir), cameraQuat);
 		float nextSide = prev.z;
 		//if(dot(prevQuat, currentQuat)*10.0 < hash(vec4(dir, TIME))) {
-		if(dot(prevQuat, currentQuat) < -0.2) {
-			nextSide = 1.0-nextSide;
-		}
+		float nextSideMix = clamp(dot(prevQuat, currentQuat)*5.0, -1.0, 1.0)/2.0+0.5;
+		nextSide = mix(1.0-nextSide, nextSide, nextSideMix);
+		//if(dot(prevQuat, currentQuat) < -0.2) {
+			//nextSide = 1.0-nextSide;
+		//}
 		vec2 nextRot = normalize(quatMult(quatConj(directQuat), currentQuat).zw);
 
-		vec3 nextColor;
-		if(dot(dir, lookDir) > 0.0) { // pixel is visible
-			nextColor = vec3(nextRot, nextSide);
-		} else { // pixel is not visible
-			nextColor = prev.xyz;
-		}
+		float nextColorMix = clamp(dot(dir, lookDir)*5.0, -1.0, 1.0)/2.0+0.5;
+		vec3 nextColor = mixCube(prev.xyz, vec3(nextRot, nextSide), nextColorMix);
+		//if(dot(dir, lookDir) > 0.0) { // pixel is visible
+			//nextColor = vec3(nextRot, nextSide);
+		//} else { // pixel is not visible
+			//nextColor = prev.xyz;
+		//}
 		vec3 prevCenter = texture(previousFrame, dirToUV(lookDir)).xyz;
-		vec3 fadeToColor = vec3(nextRot, round(prevCenter.z));
+		vec3 fadeToColor = vec3(nextRot, clamp((prevCenter.z-0.5)*10.0, -0.5, 0.5)+0.5);
 		float fadeAmount = fadeSpeed * deltaTime;
 		COLOR = vec4(normalize(mix(nextColor.xy, fadeToColor.xy, fadeAmount)),
 				moveTowards(nextColor.z, fadeToColor.z, fadeAmount), 1.0);

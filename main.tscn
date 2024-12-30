@@ -1,9 +1,11 @@
-[gd_scene load_steps=16 format=3 uid="uid://7ly7a6m36fdp"]
+[gd_scene load_steps=18 format=3 uid="uid://7ly7a6m36fdp"]
 
 [ext_resource type="Script" path="res://rendering.gd" id="1_j8ejl"]
 [ext_resource type="Shader" path="res://main.gdshader" id="1_rlp0l"]
+[ext_resource type="Texture2D" uid="uid://bugp6c8n5lcal" path="res://crosshairs.png" id="2_855yc"]
 [ext_resource type="Shader" path="res://quaternion.gdshader" id="3_medhl"]
 [ext_resource type="PackedScene" uid="uid://b5o753f30myfi" path="res://wall.tscn" id="3_q5oyi"]
+[ext_resource type="Texture2D" uid="uid://bgi44lakq8s4w" path="res://noise.png" id="4_x800n"]
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_0nl7y"]
 viewport_path = NodePath("Rendering/Quaternion")
@@ -21,6 +23,7 @@ shader_parameter/camTransform = Basis(0.05, 0, 0, 0, -0.05, 0, 0, 0, -0.05)
 shader_parameter/worldA = SubResource("ViewportTexture_rklwj")
 shader_parameter/worldB = SubResource("ViewportTexture_d6kdv")
 shader_parameter/quatShader = SubResource("ViewportTexture_0nl7y")
+shader_parameter/noiseTex = ExtResource("4_x800n")
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_0nt08"]
 viewport_path = NodePath("Rendering/Quaternion")
@@ -28,7 +31,7 @@ viewport_path = NodePath("Rendering/Quaternion")
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_30cst"]
 resource_local_to_scene = true
 shader = ExtResource("3_medhl")
-shader_parameter/fadeSpeed = 1.0
+shader_parameter/fadeSpeed = 0.8
 shader_parameter/cameraQuat = null
 shader_parameter/clear = null
 shader_parameter/deltaTime = null
@@ -60,14 +63,14 @@ func _ready() -> void:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
-		yaw += event.relative.x * SENSITIVITY
-		pitch += event.relative.y * SENSITIVITY
+		yaw += event.relative.x * SENSITIVITY;
+		pitch = clamp(pitch + event.relative.y * SENSITIVITY, -PI/2, PI/2);
 		cameraPos.quaternion = getLookQuat()
 	elif event.is_action(\"quit\"):
 		get_tree().quit()
 	elif event.is_action(\"reset\"):
 		position = orig_pos
-		$\"Camera Pos\".triggerSideReset()
+		#$\"Camera Pos\".triggerSideReset()
 
 func _physics_process(delta: float) -> void:
 	# Add the gravity.
@@ -146,6 +149,18 @@ reflected_light_source = 1
 
 [node name="Rendering" type="Node" parent="."]
 script = ExtResource("1_j8ejl")
+
+[node name="TextureRect" type="TextureRect" parent="Rendering"]
+texture_filter = 1
+anchors_preset = -1
+anchor_left = 0.475
+anchor_top = 0.475
+anchor_right = 0.525
+anchor_bottom = 0.525
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_855yc")
+stretch_mode = 5
 
 [node name="View" type="ColorRect" parent="Rendering"]
 material = SubResource("ShaderMaterial_a1db4")
