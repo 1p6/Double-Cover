@@ -1,4 +1,4 @@
-[gd_scene load_steps=35 format=3 uid="uid://7ly7a6m36fdp"]
+[gd_scene load_steps=43 format=3 uid="uid://7ly7a6m36fdp"]
 
 [ext_resource type="Script" path="res://rendering.gd" id="1_j8ejl"]
 [ext_resource type="Shader" path="res://main.gdshader" id="1_rlp0l"]
@@ -25,6 +25,20 @@ shader_parameter/worldA = SubResource("ViewportTexture_rklwj")
 shader_parameter/worldB = SubResource("ViewportTexture_d6kdv")
 shader_parameter/quatShader = SubResource("ViewportTexture_0nl7y")
 shader_parameter/noiseTex = ExtResource("4_x800n")
+
+[sub_resource type="Environment" id="Environment_fuuqo"]
+background_mode = 1
+background_color = Color(0.8, 0.352, 0.352, 1)
+ambient_light_source = 1
+ambient_light_energy = 0.0
+reflected_light_source = 1
+
+[sub_resource type="Environment" id="Environment_mw0l0"]
+background_mode = 1
+background_color = Color(0.1863, 0.425385, 0.81, 1)
+ambient_light_source = 1
+ambient_light_color = Color(0.166667, 1, 0, 1)
+reflected_light_source = 1
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_0nt08"]
 viewport_path = NodePath("Renderer/Quaternion")
@@ -145,13 +159,6 @@ func _process(delta: float) -> void:
 	pass
 "
 
-[sub_resource type="Environment" id="Environment_f8qqs"]
-background_mode = 1
-ambient_light_source = 3
-ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_energy = 0.0
-reflected_light_source = 1
-
 [sub_resource type="SphereMesh" id="SphereMesh_6r5ep"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_ehi5s"]
@@ -204,6 +211,7 @@ wait_time = 0.3
 autostart = true
 
 [node name="TextureRect" type="TextureRect" parent="Renderer"]
+light_mask = 0
 texture_filter = 1
 anchors_preset = -1
 anchor_left = 0.475
@@ -216,6 +224,7 @@ texture = ExtResource("2_855yc")
 stretch_mode = 5
 
 [node name="View" type="ColorRect" parent="Renderer"]
+light_mask = 0
 material = SubResource("ShaderMaterial_a1db4")
 anchors_preset = 15
 anchor_right = 1.0
@@ -228,6 +237,7 @@ grow_vertical = 2
 [node name="Camera3D" type="Camera3D" parent="Renderer/World A"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.08965, 2.04016, 4.31808)
 cull_mask = 1048573
+environment = SubResource("Environment_fuuqo")
 fov = 90.0
 
 [node name="World B" type="SubViewport" parent="Renderer"]
@@ -235,6 +245,7 @@ fov = 90.0
 [node name="Camera3D" type="Camera3D" parent="Renderer/World B"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.08965, 2.04016, 4.31808)
 cull_mask = 1048574
+environment = SubResource("Environment_mw0l0")
 fov = 90.0
 
 [node name="Quaternion" type="SubViewport" parent="Renderer"]
@@ -284,7 +295,6 @@ quatRect = NodePath("../../Renderer/Quaternion/ColorRect")
 transform = Transform3D(0.728957, 0.405172, -0.551777, -5.2079e-09, 0.806032, 0.591872, 0.68456, -0.431449, 0.587563, -7.51673, 4.41572, 8.26045)
 layers = 3
 light_energy = 2.0
-light_bake_mode = 0
 shadow_enabled = true
 sky_mode = 1
 
@@ -293,7 +303,6 @@ transform = Transform3D(-0.94335, -0.196382, 0.26744, 1.51936e-08, 0.806032, 0.5
 layers = 3
 light_color = Color(0.866667, 0, 1, 1)
 light_energy = 0.02
-light_bake_mode = 0
 shadow_enabled = true
 sky_mode = 1
 
@@ -318,9 +327,6 @@ light_color = Color(0, 0, 1, 1)
 light_energy = 2.0
 light_cull_mask = 4294967294
 shadow_enabled = true
-
-[node name="WorldEnvironment" type="WorldEnvironment" parent="Lighting"]
-environment = SubResource("Environment_f8qqs")
 
 [node name="Geometry" type="Node3D" parent="."]
 
