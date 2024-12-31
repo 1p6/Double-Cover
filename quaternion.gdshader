@@ -101,10 +101,11 @@ void fragment() {
 		vec3 prev = texture(previousFrame, dirToUV(offsetDir)).xyz;
 		prev = vec3(normalize(prev.xy), round(prev.z));
 		vec4 directQuat = quatBetween(vec3(0,0,-1), dir);
+		vec4 prevDirectQuat = quatBetween(vec3(0,0,-1), offsetDir);
 		vec2 prevRot = prev.xy*2.0 - 1.0;
 		float prevRotLen = length(prevRot);
 		prevRot = prevRotLen < 1e-8 ? vec2(0,1) : prevRot / prevRotLen;
-		vec4 prevQuat = quatMult(directQuat, vec4(0, 0, prevRot));
+		vec4 prevQuat = quatMult(prevDirectQuat, vec4(0, 0, prevRot));
 		vec4 currentQuat = quatMult(quatBetween(lookDir, dir), cameraQuat);
 		float nextSide = prev.z;
 		//if(dot(prevQuat, currentQuat)*10.0 < hash(vec4(dir, TIME))) {

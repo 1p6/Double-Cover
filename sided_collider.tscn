@@ -2,8 +2,9 @@
 
 [sub_resource type="GDScript" id="GDScript_ccoku"]
 script/source = "extends StaticBody3D
+class_name SidedCollider
 
-@export var isBSide: bool = false
+@export_flags('A', 'B') var sides: int = 3
 @export var renderer: Renderer
 @onready var defaultLayer: int = collision_layer
 
@@ -13,8 +14,8 @@ func _ready() -> void:
 	renderer.onSideChange.connect(onSideChange)
 	pass # Replace with function body.
 
-func onSideChange(side: bool):
-	collision_layer = defaultLayer if side == isBSide else 0
+func onSideChange(isOnBSide: bool):
+	collision_layer = defaultLayer if (sides & (2 if isOnBSide else 1)) != 0 else 0
 "
 
 [node name="Sided Collider" type="StaticBody3D"]

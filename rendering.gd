@@ -2,7 +2,8 @@ extends Node
 class_name Renderer
 
 var isOnBSide : bool = false
-signal onSideChange(newSide: bool)
+var doneFirstSideChangeEmit: bool = false
+signal onSideChange(newIsOnBSide: bool)
 
 func onViewportChange():
 	$"World A".size = get_viewport().size
@@ -27,5 +28,7 @@ func _on_side_var_updater_timeout() -> void:
 	var center = img.get_pixel(img.get_width()/2, img.get_height()/4);
 	var prevSide = isOnBSide
 	isOnBSide = center.b > 0.5;
-	if prevSide != isOnBSide: onSideChange.emit(isOnBSide)
+	if prevSide != isOnBSide or not doneFirstSideChangeEmit:
+		onSideChange.emit(isOnBSide)
+		doneFirstSideChangeEmit = true
 	$Label.text = "Side: " + ("B" if isOnBSide else "A");
