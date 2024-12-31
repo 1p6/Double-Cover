@@ -9,6 +9,8 @@ uniform sampler2D noiseTex : source_color;
 uniform mat3 camTransform;
 
 varying vec3 posLinear;
+varying vec3 posLinear1;
+varying vec3 posLinear2;
 
 vec2 dirToUV(in vec3 dir) {
 	vec3 mag = abs(dir);
@@ -42,13 +44,20 @@ vec3 hash3(in vec4 a) {
 void vertex() {
 	// Called for every vertex the material is visible on.
 	posLinear = camTransform * vec3(UV*2.0-1.0, 1.0);
+	posLinear1 = camTransform * vec3(UV*2.0-1.0 + vec2(0.0,0.01), 1.0);
+	posLinear2 = camTransform * vec3(UV*2.0-1.0 + vec2(0.01,0.0), 1.0);
 }
 
 void fragment() {
 	// Called for every pixel the material is visible on.
 	vec3 pos = normalize(posLinear);
+	vec3 pos1 = normalize(posLinear1);
+	vec3 pos2 = normalize(posLinear2);
 	vec2 cubeUV = dirToUV(pos);
 	float side = texture(quatShader, cubeUV).z;
+	float side1 = texture(quatShader, dirToUV(pos1)).z;
+	float side2 = texture(quatShader, dirToUV(pos2)).z;
+	side = (side+side1+side2)/3.0;
 	vec3 aColor = texture(worldA, UV).xyz;
 	//vec4 aColor = vec4(vec3(texture(quatShader, dirToUV(pos)).z), 1.0);
 	//vec4 aColor = texture(quatShader, dirToUV(pos));
@@ -58,7 +67,7 @@ void fragment() {
 	vec3 sinPos = sin(pos*200.0);
 	//vec3 noise = vec3(sinPos.x*sinPos.y*sinPos.z/2.0+0.5);
 	vec3 noise = texture(noiseTex, cubeUV).xyz;
-	COLOR = vec4(mix(mix(aColor, bColor, side), noise, side*(1.0-side)*1.0), 1.0);
+	COLOR = vec4(mix(mix(aColor, bColor, side), noise, side*(1.0-side)*4.0), 1.0);
 
 	vec4 under = texture(underUI, UV);
 	vec3 crosshairDiff = under.xyz - vec3(1, 0, 1);

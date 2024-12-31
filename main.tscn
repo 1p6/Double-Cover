@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://7ly7a6m36fdp"]
+[gd_scene load_steps=24 format=3 uid="uid://7ly7a6m36fdp"]
 
 [ext_resource type="Script" path="res://rendering.gd" id="1_j8ejl"]
 [ext_resource type="Shader" path="res://main.gdshader" id="1_rlp0l"]
@@ -6,15 +6,16 @@
 [ext_resource type="Shader" path="res://quaternion.gdshader" id="3_medhl"]
 [ext_resource type="PackedScene" uid="uid://b5o753f30myfi" path="res://wall.tscn" id="3_q5oyi"]
 [ext_resource type="Texture2D" uid="uid://bgi44lakq8s4w" path="res://noise.png" id="4_x800n"]
+[ext_resource type="PackedScene" uid="uid://budklwxyhtnaq" path="res://sided_collider.tscn" id="7_k80qb"]
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_0nl7y"]
-viewport_path = NodePath("Rendering/Quaternion")
+viewport_path = NodePath("Renderer/Quaternion")
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_rklwj"]
-viewport_path = NodePath("Rendering/World A")
+viewport_path = NodePath("Renderer/World A")
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_d6kdv"]
-viewport_path = NodePath("Rendering/World B")
+viewport_path = NodePath("Renderer/World B")
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_a1db4"]
 resource_local_to_scene = true
@@ -26,7 +27,7 @@ shader_parameter/quatShader = SubResource("ViewportTexture_0nl7y")
 shader_parameter/noiseTex = ExtResource("4_x800n")
 
 [sub_resource type="ViewportTexture" id="ViewportTexture_0nt08"]
-viewport_path = NodePath("Rendering/Quaternion")
+viewport_path = NodePath("Renderer/Quaternion")
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_30cst"]
 resource_local_to_scene = true
@@ -36,6 +37,11 @@ shader_parameter/cameraQuat = null
 shader_parameter/clear = null
 shader_parameter/deltaTime = null
 shader_parameter/previousFrame = SubResource("ViewportTexture_0nt08")
+
+[sub_resource type="LabelSettings" id="LabelSettings_lks3v"]
+font_size = 32
+outline_size = 4
+outline_color = Color(0, 0, 0, 1)
 
 [sub_resource type="GDScript" id="GDScript_wv30x"]
 script/source = "extends CharacterBody3D
@@ -145,12 +151,24 @@ ambient_light_color = Color(1, 1, 1, 1)
 ambient_light_energy = 0.0
 reflected_light_source = 1
 
+[sub_resource type="SphereMesh" id="SphereMesh_6r5ep"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_ehi5s"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_tle7e"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_4kx2j"]
+
 [node name="Main" type="Node3D"]
 
-[node name="Rendering" type="Node" parent="."]
+[node name="Renderer" type="Node" parent="."]
 script = ExtResource("1_j8ejl")
 
-[node name="TextureRect" type="TextureRect" parent="Rendering"]
+[node name="SideVarUpdater" type="Timer" parent="Renderer"]
+wait_time = 0.3
+autostart = true
+
+[node name="TextureRect" type="TextureRect" parent="Renderer"]
 texture_filter = 1
 anchors_preset = -1
 anchor_left = 0.475
@@ -162,7 +180,7 @@ grow_vertical = 2
 texture = ExtResource("2_855yc")
 stretch_mode = 5
 
-[node name="View" type="ColorRect" parent="Rendering"]
+[node name="View" type="ColorRect" parent="Renderer"]
 material = SubResource("ShaderMaterial_a1db4")
 anchors_preset = 15
 anchor_right = 1.0
@@ -170,26 +188,26 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="World A" type="SubViewport" parent="Rendering"]
+[node name="World A" type="SubViewport" parent="Renderer"]
 
-[node name="Camera3D" type="Camera3D" parent="Rendering/World A"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.04016, 0)
+[node name="Camera3D" type="Camera3D" parent="Renderer/World A"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.08965, 2.04016, 4.31808)
 cull_mask = 1048573
 fov = 90.0
 
-[node name="World B" type="SubViewport" parent="Rendering"]
+[node name="World B" type="SubViewport" parent="Renderer"]
 
-[node name="Camera3D" type="Camera3D" parent="Rendering/World B"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.04016, 0)
+[node name="Camera3D" type="Camera3D" parent="Renderer/World B"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.08965, 2.04016, 4.31808)
 cull_mask = 1048574
 fov = 90.0
 
-[node name="Quaternion" type="SubViewport" parent="Rendering"]
+[node name="Quaternion" type="SubViewport" parent="Renderer"]
 disable_3d = true
 size = Vector2i(768, 512)
 render_target_clear_mode = 1
 
-[node name="ColorRect" type="ColorRect" parent="Rendering/Quaternion"]
+[node name="ColorRect" type="ColorRect" parent="Renderer/Quaternion"]
 material = SubResource("ShaderMaterial_30cst")
 anchors_preset = 15
 anchor_right = 1.0
@@ -197,8 +215,17 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="Label" type="Label" parent="Renderer"]
+visible = false
+offset_left = 93.0
+offset_top = 51.0
+offset_right = 158.0
+offset_bottom = 96.0
+text = "Side"
+label_settings = SubResource("LabelSettings_lks3v")
+
 [node name="CharacterBody3D" type="CharacterBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.48842, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.08965, 1.48842, 4.31808)
 script = SubResource("GDScript_wv30x")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="CharacterBody3D"]
@@ -211,10 +238,10 @@ mesh = SubResource("CapsuleMesh_2u012")
 [node name="Camera Pos" type="Node3D" parent="CharacterBody3D" node_paths=PackedStringArray("cameraA", "cameraB", "viewRect", "quatRect")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.551736, 0)
 script = SubResource("GDScript_x4wxa")
-cameraA = NodePath("../../Rendering/World A/Camera3D")
-cameraB = NodePath("../../Rendering/World B/Camera3D")
-viewRect = NodePath("../../Rendering/View")
-quatRect = NodePath("../../Rendering/Quaternion/ColorRect")
+cameraA = NodePath("../../Renderer/World A/Camera3D")
+cameraB = NodePath("../../Renderer/World B/Camera3D")
+viewRect = NodePath("../../Renderer/View")
+quatRect = NodePath("../../Renderer/Quaternion/ColorRect")
 
 [node name="Wall" parent="." instance=ExtResource("3_q5oyi")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00219786, -0.011579, 0.00607252)
@@ -274,3 +301,24 @@ shadow_enabled = true
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="Lighting"]
 environment = SubResource("Environment_f8qqs")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.780332, 1.15753, 0.626001)
+layers = 3
+mesh = SubResource("SphereMesh_6r5ep")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="MeshInstance3D"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MeshInstance3D/StaticBody3D"]
+shape = SubResource("SphereShape3D_ehi5s")
+
+[node name="Sided Collider" parent="." instance=ExtResource("7_k80qb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.779376, 1.10943, -1.69989)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Sided Collider"]
+shape = SubResource("BoxShape3D_tle7e")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Sided Collider/CollisionShape3D"]
+mesh = SubResource("BoxMesh_4kx2j")
+
+[connection signal="timeout" from="Renderer/SideVarUpdater" to="Renderer" method="_on_side_var_updater_timeout"]

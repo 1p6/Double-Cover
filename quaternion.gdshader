@@ -2,7 +2,7 @@ shader_type canvas_item;
 render_mode blend_disabled;
 
 //uniform sampler2D previousFrame : source_color, hint_screen_texture;
-uniform sampler2D previousFrame : source_color;
+uniform sampler2D previousFrame : source_color, filter_nearest;
 uniform float fadeSpeed;
 uniform vec4 cameraQuat;
 uniform bool clear;
@@ -95,9 +95,11 @@ void fragment() {
 	if(clear) {
 		COLOR = vec4(0.5, 1, 0, 1);
 	} else {
-		vec4 prev = texture(previousFrame, UV);
 		vec3 dir = normalize(uvToDir(UV));
 		vec3 lookDir = quatXform(cameraQuat, vec3(0.0, 0.0, -1.0));
+		vec3 offsetDir = mix(dir, lookDir, 0.05);
+		vec3 prev = texture(previousFrame, dirToUV(offsetDir)).xyz;
+		prev = vec3(normalize(prev.xy), round(prev.z));
 		vec4 directQuat = quatBetween(vec3(0,0,-1), dir);
 		vec2 prevRot = prev.xy*2.0 - 1.0;
 		float prevRotLen = length(prevRot);
@@ -106,25 +108,28 @@ void fragment() {
 		vec4 currentQuat = quatMult(quatBetween(lookDir, dir), cameraQuat);
 		float nextSide = prev.z;
 		//if(dot(prevQuat, currentQuat)*10.0 < hash(vec4(dir, TIME))) {
-		float nextSideMix = clamp(dot(prevQuat, currentQuat)*5.0, -1.0, 1.0)/2.0+0.5;
-		nextSide = mix(1.0-nextSide, nextSide, nextSideMix);
+		//float nextSideMix = clamp(dot(prevQuat, currentQuat)*5.0, -1.0, 1.0)/2.0+0.5;
+		//nextSide = mix(1.0-nextSide, nextSide, nextSideMix);
+		nextSide = dot(prevQuat, currentQuat) < 0.0 ? 1.0-nextSide : nextSide;
 		//if(dot(prevQuat, currentQuat) < -0.2) {
 			//nextSide = 1.0-nextSide;
 		//}
 		vec2 nextRot = normalize(quatMult(quatConj(directQuat), currentQuat).zw);
 
-		float nextColorMix = clamp(dot(dir, lookDir)*5.0, -1.0, 1.0)/2.0+0.5;
-		vec3 nextColor = mixCube(prev.xyz, vec3(nextRot, nextSide), nextColorMix);
+		//float nextColorMix = clamp(dot(dir, lookDir)*5.0, -1.0, 1.0)/2.0+0.5;
+		//vec3 nextColor = mixCube(prev.xyz, vec3(nextRot, nextSide), nextColorMix);
+		vec3 nextColor = dot(dir, lookDir) < 0.0 ? prev : vec3(nextRot, nextSide);
 		//if(dot(dir, lookDir) > 0.0) { // pixel is visible
 			//nextColor = vec3(nextRot, nextSide);
 		//} else { // pixel is not visible
 			//nextColor = prev.xyz;
 		//}
-		vec3 prevCenter = texture(previousFrame, dirToUV(lookDir)).xyz;
-		vec3 fadeToColor = vec3(nextRot, clamp((prevCenter.z-0.5)*10.0, -0.5, 0.5)+0.5);
-		float fadeAmount = fadeSpeed * deltaTime;
-		COLOR = vec4(normalize(mix(nextColor.xy, fadeToColor.xy, fadeAmount)),
-				moveTowards(nextColor.z, fadeToColor.z, fadeAmount), 1.0);
+		COLOR = vec4(nextColor, 1.0);
+		//vec3 prevCenter = texture(previousFrame, dirToUV(lookDir)).xyz;
+		//vec3 fadeToColor = vec3(nextRot, clamp((prevCenter.z-0.5)*10.0, -0.5, 0.5)+0.5);
+		//float fadeAmount = fadeSpeed * deltaTime;
+		//COLOR = vec4(normalize(mix(nextColor.xy, fadeToColor.xy, fadeAmount)),
+				//moveTowards(nextColor.z, fadeToColor.z, fadeAmount), 1.0);
 	}
 	//COLOR = vec4(fract(prev.rgb + vec3(0.1, 0.2, 0.3)/60.0), 1.0);
 	//COLOR = vec4(dirToUV(uvToDir(UV)), 0.0, 1.0);
