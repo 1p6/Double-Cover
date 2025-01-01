@@ -337,7 +337,7 @@ anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 23.0
 grow_horizontal = 2
-text = "WASD - Move, Mouse - Look, R - Respawn, F - Toggle Fullscreen, Q - Quit
+text = "WASD - Move, Mouse - Look, R - Respawn, F - Toggle Fullscreen, Q - Quit, Space - Jump, Click - Capture Mouse
 Try turning aroung really fast!"
 label_settings = SubResource("LabelSettings_7xquj")
 horizontal_alignment = 1
