@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://7ly7a6m36fdp"]
+[gd_scene load_steps=7 format=3 uid="uid://7ly7a6m36fdp"]
 
 [ext_resource type="Script" path="res://rendering.gd" id="1_j8ejl"]
 [ext_resource type="Shader" path="res://main.gdshader" id="1_rlp0l"]
@@ -9,10 +9,16 @@ resource_local_to_scene = true
 shader = ExtResource("1_rlp0l")
 shader_parameter/camPos = null
 shader_parameter/camLook = Vector4(0, 0, 0, 1)
+shader_parameter/camLookRhs = null
 shader_parameter/screenRes = Vector2(256, 256)
 
 [sub_resource type="LabelSettings" id="LabelSettings_7xquj"]
 font_size = 32
+
+[sub_resource type="LabelSettings" id="LabelSettings_6mjqo"]
+font_size = 32
+outline_size = 8
+outline_color = Color(0, 0, 0, 1)
 
 [node name="Main" type="Node3D"]
 
@@ -52,3 +58,16 @@ Try turning aroung really fast!"
 label_settings = SubResource("LabelSettings_7xquj")
 horizontal_alignment = 1
 autowrap_mode = 2
+
+[node name="Pos Look" type="Label" parent="Renderer"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = -129.0
+offset_right = 132.0
+offset_bottom = -36.0
+grow_vertical = 0
+text = "Pos: 
+Look: "
+label_settings = SubResource("LabelSettings_6mjqo")
