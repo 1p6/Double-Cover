@@ -9,8 +9,9 @@ uniform vec2 screenRes;
 
 varying vec2 scaledUV;
 
-const int iters = 80;
-const float farPlane = 40.0;
+const int iters = 180;
+const float jumpFactor = 0.1;
+const float farPlane = 100.0;
 const float tolerance = 1e-4;
 const vec3 noHitColor = vec3(0.0);
 const vec3 farColor = vec3(0.0);
@@ -101,6 +102,14 @@ vec4 cliffordTorus(vec4 pos, vec2 radius, float thickness, vec3 color) {
 	return vec4(color, length(vec2(length(pos.xy),length(pos.zw))-radius)-thickness);
 }
 
+vec4 klien(vec4 pos, vec2 radius, float thickness, vec3 color) {
+	// https://en.wikipedia.org/w/index.php?title=Klein_bottle&oldid=1265276111#3D_pinched_torus_/_4D_M%C3%B6bius_tube
+	float eq1 = length(vec3(length(pos.xy)-radius.y, pos.zw))-radius.x; // base torus
+	vec2 squared = vec2(pos.z*pos.z-pos.w*pos.w,2.0*pos.z*pos.w); // square the complex number pos.zw
+	float eq2 = dot(pos.xy, squared.yx*vec2(-1,1))/1.0; // make sure pos.xy and squared point in the same direction via dot product with perpendicular
+	return vec4(color, length(vec2(eq1,eq2))-thickness);
+}
+
 vec4 sdf(vec4 pos) {
 	//vec4 res = cube(fract(pos)-0.5, vec4(0.2));
 
@@ -112,7 +121,9 @@ vec4 sdf(vec4 pos) {
 
 	//vec4 res = sphere(fract(pos)-0.5, 0.2, vec3(1,0,1));
 	
-	vec4 res = cliffordTorus(pos, vec2(1.0, 2.0), 0.2, vec3(1,0,1));
+	//vec4 res = cliffordTorus(pos, vec2(1.0, 2.0), 0.2, vec3(1,0,1));
+	
+	vec4 res = klien(pos, vec2(1.0, 3.0), 0.5, vec3(1,0,1));
 
 	return res;
 }
@@ -151,8 +162,8 @@ void fragment() {
 			hit = res;
 			break;
 		}
-		currPos += pixDir * res.w;
-		dist += res.w;
+		currPos += pixDir * res.w * jumpFactor;
+		dist += res.w * jumpFactor;
 	}
 	if(hit.w != -100.0) {
 		vec4 normal = getNormal(currPos);
@@ -160,13 +171,13 @@ void fragment() {
 		vec4 spinVis = quatMult(quatConj(pixDirPart), normal);
 		vec2 spinVis2 = vec2(length(spinVis.xyz), spinVis.w);
 		spinVis2 = vec2(spinVis2.x*spinVis2.x-spinVis2.y*spinVis2.y,2.0*spinVis2.x*spinVis2.y);
-		hit.xyz = hueToRGB(atan(spinVis2.y, spinVis2.x)/TAU*15.0);
+		hit.xyz = hueToRGB(atan(spinVis2.y, spinVis2.x)/TAU*15.0+TIME*3.0);
 
 		// Phong shading
-		//float diffuse = max(0.0, dot(normal, sunDir));
-		//vec4 reflectDir = pixDir - 2.0*dot(normal, pixDir)*normal;
-		//float specular = pow(max(dot(reflectDir, sunDir), 0.0), 20.0);
-		//hit.xyz = clamp(hit.xyz*diffuse + vec3(specular) + vec3(0.1), 0.0, 1.0);
+		float diffuse = max(0.0, dot(normal, sunDir));
+		vec4 reflectDir = pixDir - 2.0*dot(normal, pixDir)*normal;
+		float specular = pow(max(dot(reflectDir, sunDir), 0.0), 20.0);
+		hit.xyz = clamp(hit.xyz*diffuse + vec3(specular) + vec3(0.1), 0.0, 1.0);
 	} else {
 		hit.xyz = clamp(pow(max(0.0, dot(pixDir, sunDir)), 100.0)*vec3(1.0) + vec3(0.0,0.8,0.8), 0.0, 1.0);
 	}
