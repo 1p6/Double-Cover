@@ -102,7 +102,7 @@ vec4 cliffordTorus(vec4 pos, vec2 radius, float thickness, vec3 color) {
 }
 
 vec4 sdf(vec4 pos) {
-	vec4 res = cube(fract(pos)-0.5, vec4(0.2));
+	//vec4 res = cube(fract(pos)-0.5, vec4(0.2));
 
 	//vec4 res = sphere(pos-vec4(0.0), 1.0, vec3(1,0,0));
 	//res = union(res, sphere(pos-vec4(3,0,0,0), 1.0, vec3(0,1,0)));
@@ -112,7 +112,7 @@ vec4 sdf(vec4 pos) {
 
 	//vec4 res = sphere(fract(pos)-0.5, 0.2, vec3(1,0,1));
 	
-	//vec4 res = cliffordTorus(pos, vec2(1.0, 2.0), 0.2, vec3(1,0,1));
+	vec4 res = cliffordTorus(pos, vec2(1.0, 2.0), 0.2, vec3(1,0,1));
 
 	return res;
 }
@@ -127,12 +127,17 @@ vec4 getNormal(vec4 pos) {
 	return normalize((vec4(x,y,z,w)-orig)/normalEps);
 }
 
+vec3 hueToRGB(float hue) {
+	return cos(TAU*(vec3(hue)+vec3(0,1.0/3.0,2.0/3.0)))/2.0+0.5;
+}
+
 const vec4 sunDir = normalize(vec4(1));
 
 void fragment() {
 	// Called for every pixel the material is visible on.
 	vec4 localPixDir = quatBetween(vec3(0,0,-1), normalize(vec3(scaledUV, -1)));
-	vec4 pixDir = quatMult(quatMult(camLook, localPixDir), quatMult(localPixDir, camLookRhs));
+	vec4 pixDirPart = quatMult(camLook, localPixDir);
+	vec4 pixDir = quatMult(pixDirPart, quatMult(localPixDir, camLookRhs));
 	vec4 currPos = camPos;
 	float dist = 0.0;
 	vec4 hit = vec4(noHitColor, -100.0);
@@ -151,10 +156,17 @@ void fragment() {
 	}
 	if(hit.w != -100.0) {
 		vec4 normal = getNormal(currPos);
-		float diffuse = max(0.0, dot(normal, sunDir));
-		vec4 reflectDir = pixDir - 2.0*dot(normal, pixDir)*normal;
-		float specular = pow(max(dot(reflectDir, sunDir), 0.0), 20.0);
-		hit.xyz = clamp(hit.xyz*diffuse + vec3(specular) + vec3(0.1), 0.0, 1.0);
+		// Spin visualization
+		vec4 spinVis = quatMult(quatConj(pixDirPart), normal);
+		vec2 spinVis2 = vec2(length(spinVis.xyz), spinVis.w);
+		spinVis2 = vec2(spinVis2.x*spinVis2.x-spinVis2.y*spinVis2.y,2.0*spinVis2.x*spinVis2.y);
+		hit.xyz = hueToRGB(atan(spinVis2.y, spinVis2.x)/TAU*15.0);
+
+		// Phong shading
+		//float diffuse = max(0.0, dot(normal, sunDir));
+		//vec4 reflectDir = pixDir - 2.0*dot(normal, pixDir)*normal;
+		//float specular = pow(max(dot(reflectDir, sunDir), 0.0), 20.0);
+		//hit.xyz = clamp(hit.xyz*diffuse + vec3(specular) + vec3(0.1), 0.0, 1.0);
 	} else {
 		hit.xyz = clamp(pow(max(0.0, dot(pixDir, sunDir)), 100.0)*vec3(1.0) + vec3(0.0,0.8,0.8), 0.0, 1.0);
 	}
