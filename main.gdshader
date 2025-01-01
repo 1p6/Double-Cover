@@ -1,16 +1,16 @@
 shader_type canvas_item;
 render_mode blend_disabled;
 
-uniform sampler2D worldA : source_color;
-uniform sampler2D worldB : source_color;
-uniform sampler2D quatShader : source_color, filter_nearest;
 uniform sampler2D underUI : source_color, hint_screen_texture;
-uniform sampler2D noiseTex : source_color;
-uniform mat3 camTransform;
+uniform vec4 camPos;
+uniform vec4 camLook;
+uniform vec2 screenRes;
 
-varying vec3 posLinear;
-varying vec3 posLinear1;
-varying vec3 posLinear2;
+varying vec2 scaledUV;
+
+const int iters = 40;
+const float farPlane = 100.0;
+const float tolerance = 1e-4;
 
 vec2 dirToUV(in vec3 dir) {
 	vec3 mag = abs(dir);
@@ -29,6 +29,35 @@ vec2 dirToUV(in vec3 dir) {
 	return ((dir.yz/max(mag.x, 1e-6)+1.0)/2.0 + vec2(part, (sign(dir.x)+1.0)/2.0)) / vec2(3.0, 2.0);
 }
 
+vec4 quatBetween(in vec3 from, in vec3 to) {
+	// from https://github.com/godotengine/godot/blob/75ce4266c4774b30ed5df67e6c43365418fcce5f/core/math/quaternion.h#L143
+	vec3 c = cross(from, to);
+	float d = dot(from, to);
+
+	if(d < 1e-8 - 1.0) {
+		return vec4(0, 1, 0, 0);
+	} else {
+		float s = sqrt((1.0 + d) * 2.0);
+		float rs = 1.0 / s;
+		return vec4(c*rs, s * 0.5);
+	}
+}
+
+vec3 quatXform(in vec4 quat, in vec3 pos) {
+	// from https://github.com/godotengine/godot/blob/75ce4266c4774b30ed5df67e6c43365418fcce5f/core/math/quaternion.h#L90
+	vec3 uv = cross(quat.xyz, pos);
+	return pos + ((uv * quat.w) + cross(quat.xyz, uv)) * 2.0;
+}
+
+vec4 quatMult(in vec4 a, in vec4 b) {
+	return vec4(a.w * b.xyz + a.xyz * b.w + cross(a.xyz, b.xyz),
+				a.w * b.w - dot(a.xyz, b.xyz));
+}
+
+vec4 quatConj(in vec4 a) {
+	return vec4(-a.xyz, a.w);
+}
+
 float hash(in vec4 a, in float b) {
 	return sin(dot(a, vec4(827.972, 137.828, 894.827, 198.925)) + b*981.7927);
 }
@@ -43,36 +72,64 @@ vec3 hash3(in vec4 a) {
 
 void vertex() {
 	// Called for every vertex the material is visible on.
-	posLinear = camTransform * vec3(UV*2.0-1.0, 1.0);
-	posLinear1 = camTransform * vec3(UV*2.0-1.0 + vec2(0.0,0.01), 1.0);
-	posLinear2 = camTransform * vec3(UV*2.0-1.0 + vec2(0.01,0.0), 1.0);
+	scaledUV = (UV-0.5) * 2.0 * screenRes / max(1e-6, min(screenRes.x, screenRes.y)) * vec2(1,-1);
+}
+
+vec4 sphere(vec4 pos, float radius, vec3 color) {
+	return vec4(color, length(pos)-radius);
+}
+vec4 cube(vec4 pos, vec4 size) {
+	vec3 col = vec3(1,0,0);
+	if(pos.x > pos.y && pos.x > pos.z && pos.x > pos.w) col = vec3(0,1,0);
+	else if(pos.y > pos.z && pos.y > pos.w) col = vec3(0,0,1);
+	else if(pos.z > pos.w) col = vec3(1,0,1);
+	return sphere(max(pos-size,0.0), 0.0, col);
+}
+vec4 union(vec4 a, vec4 b) {
+	return a.w < b.w ? a : b;
+}
+vec4 intersect(vec4 a, vec4 b) {
+	return a.w < b.w ? b : a;
+}
+
+vec4 sdf(vec4 pos) {
+	//vec4 res = cube(fract(pos)-0.5, vec4(0.05));
+
+	//vec4 res = sphere(pos-vec4(0.0), 1.0, vec3(1,0,0));
+	//res = union(res, sphere(pos-vec4(3,0,0,0), 1.0, vec3(0,1,0)));
+	//res = union(res, sphere(pos-vec4(3,0,0,0).yzwx, 1.0, vec3(0,0,1)));
+	//res = union(res, sphere(pos-vec4(3,0,0,0).zwxy, 1.0, vec3(0,1,1)));
+	//res = union(res, sphere(pos-vec4(3,0,0,0).wxyz, 1.0, vec3(1,0,1)));
+
+	vec4 res = sphere(fract(pos)-0.5, 0.2, vec3(1,0,1));
+
+	return res;
 }
 
 void fragment() {
 	// Called for every pixel the material is visible on.
-	vec3 pos = normalize(posLinear);
-	vec3 pos1 = normalize(posLinear1);
-	vec3 pos2 = normalize(posLinear2);
-	vec2 cubeUV = dirToUV(pos);
-	float side = texture(quatShader, cubeUV).z;
-	float side1 = texture(quatShader, dirToUV(pos1)).z;
-	float side2 = texture(quatShader, dirToUV(pos2)).z;
-	side = (side+side1+side2)/3.0;
-	vec3 aColor = texture(worldA, UV).xyz;
-	//vec4 aColor = vec4(vec3(texture(quatShader, dirToUV(pos)).z), 1.0);
-	//vec4 aColor = texture(quatShader, dirToUV(pos));
-	//vec4 aColor = vec4(vec3(max(dot(sin(pos*32.0), vec3(1.0)), 0.0)*pos)/2.0+0.5, 1.0);
-	//vec4 aColor = vec4(vec3(pos.y)/2.0+0.5, 1.0);
-	vec3 bColor = texture(worldB, UV).xyz;
-	vec3 sinPos = sin(pos*200.0);
-	//vec3 noise = vec3(sinPos.x*sinPos.y*sinPos.z/2.0+0.5);
-	vec3 noise = texture(noiseTex, cubeUV).xyz;
-	COLOR = vec4(mix(mix(aColor, bColor, side), noise, side*(1.0-side)*4.0), 1.0);
+	vec4 pixDir = quatMult(camLook, quatBetween(vec3(0,0,-1), normalize(vec3(scaledUV, -1))));
+	vec4 currPos = camPos;
+	float dist = 0.0;
+	vec4 hit = vec4(vec3(0,0,0), farPlane);
+	for(int i = 0; i < iters; i++) {
+		if(dist > farPlane) {
+			break;
+		}
+		vec4 res = sdf(currPos);
+		if(res.w < tolerance) {
+			hit = res;
+			break;
+		}
+		currPos += pixDir * res.w;
+		dist += res.w;
+	}
+	COLOR = vec4(hit.xyz, 1.0);
 
-	vec4 under = texture(underUI, UV);
-	vec3 crosshairDiff = under.xyz - vec3(1, 0, 1);
-	if(dot(crosshairDiff, crosshairDiff) < 1e-3) {
-		COLOR.xyz = 1.0 - COLOR.xyz;
+	vec4 under = texture(underUI, SCREEN_UV);
+	vec3 underDiff = under.xyz - vec3(1,0,1);
+	if(dot(underDiff, underDiff) < 1e-3) {
+		COLOR.xyz = 1.0-COLOR.xyz;
 	}
 }
 
