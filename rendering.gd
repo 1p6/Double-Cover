@@ -64,7 +64,7 @@ func _process(delta: float) -> void:
 	($View.material as ShaderMaterial).set_shader_parameter('camLook', camQuat);
 	($View.material as ShaderMaterial).set_shader_parameter('camLookRhs', rhsQuat);
 	var spinAxis = Vector2(Vector3(camQuat.x, camQuat.y, camQuat.z).length(), camQuat.w)
-	spinAxis = Vector2(spinAxis.x**2 - spinAxis.y**2, 2*spinAxis.x*spinAxis.y)
+	#spinAxis = Vector2(spinAxis.x**2 - spinAxis.y**2, 2*spinAxis.x*spinAxis.y)
 	$"Pos Look".text = "Pos: {0}\nLook: {1}\nSpin: {2}".format(
 		[pos, camQuat * rhsQuat, spinAxis.angle()/TAU+0.5])
 	pass

@@ -10,8 +10,9 @@ uniform vec2 screenRes;
 varying vec2 scaledUV;
 
 const int iters = 180;
-const float jumpFactor = 0.1;
+const float jumpFactor = 1.0;
 const float farPlane = 100.0;
+const float maxJump = 0.1;
 const float tolerance = 1e-4;
 const vec3 noHitColor = vec3(0.0);
 const vec3 farColor = vec3(0.0);
@@ -162,16 +163,17 @@ void fragment() {
 			hit = res;
 			break;
 		}
-		currPos += pixDir * res.w * jumpFactor;
-		dist += res.w * jumpFactor;
+		float jump = clamp(jumpFactor * res.w, -maxJump, maxJump);
+		currPos += pixDir * jump;
+		dist += jump;
 	}
 	if(hit.w != -100.0) {
 		vec4 normal = getNormal(currPos);
 		// Spin visualization
-		vec4 spinVis = quatMult(quatConj(pixDirPart), normal);
-		vec2 spinVis2 = vec2(length(spinVis.xyz), spinVis.w);
-		spinVis2 = vec2(spinVis2.x*spinVis2.x-spinVis2.y*spinVis2.y,2.0*spinVis2.x*spinVis2.y);
-		hit.xyz = hueToRGB(atan(spinVis2.y, spinVis2.x)/TAU*15.0+TIME*3.0);
+		//vec4 spinVis = quatMult(quatConj(pixDirPart), normal);
+		//vec2 spinVis2 = vec2(length(spinVis.xyz), spinVis.w);
+		//spinVis2 = vec2(spinVis2.x*spinVis2.x-spinVis2.y*spinVis2.y,2.0*spinVis2.x*spinVis2.y);
+		//hit.xyz = hueToRGB(atan(spinVis2.y, spinVis2.x)/TAU*15.0+TIME*3.0);
 
 		// Phong shading
 		float diffuse = max(0.0, dot(normal, sunDir));
