@@ -1,15 +1,15 @@
 [gd_scene load_steps=7 format=3 uid="uid://7ly7a6m36fdp"]
 
-[ext_resource type="Script" path="res://rendering.gd" id="1_j8ejl"]
-[ext_resource type="Shader" path="res://main.gdshader" id="1_rlp0l"]
+[ext_resource type="Script" uid="uid://buhflkqut8ofi" path="res://rendering.gd" id="1_j8ejl"]
+[ext_resource type="Shader" uid="uid://dom83fri2ts06" path="res://main.gdshader" id="1_rlp0l"]
 [ext_resource type="Texture2D" uid="uid://bugp6c8n5lcal" path="res://crosshairs.png" id="2_855yc"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_a1db4"]
 resource_local_to_scene = true
 shader = ExtResource("1_rlp0l")
-shader_parameter/camPos = null
+shader_parameter/camPos = Vector4(0, 0, 0, 0)
 shader_parameter/camLook = Vector4(0, 0, 0, 1)
-shader_parameter/camLookRhs = null
+shader_parameter/camLookRhs = Vector4(0, 0, 0, 0)
 shader_parameter/screenRes = Vector2(256, 256)
 
 [sub_resource type="LabelSettings" id="LabelSettings_7xquj"]

@@ -10,9 +10,10 @@ uniform vec2 screenRes;
 varying vec2 scaledUV;
 
 const int iters = 180;
-const float jumpFactor = 1.0;
+const float nearJumpFactor = 1.0;
+const float farJumpFactor = 0.0;
+const float nearFarCutoff = 0.01;
 const float farPlane = 100.0;
-const float maxJump = 0.1;
 const float tolerance = 1e-4;
 const vec3 noHitColor = vec3(0.0);
 const vec3 farColor = vec3(0.0);
@@ -163,7 +164,13 @@ void fragment() {
 			hit = res;
 			break;
 		}
-		float jump = clamp(jumpFactor * res.w, -maxJump, maxJump);
+		float jump;
+		if(abs(res.w) < nearFarCutoff)
+			jump = res.w * nearJumpFactor;
+		else if(res.w > 0.0)
+			jump = (res.w - nearFarCutoff) * farJumpFactor + nearFarCutoff * nearJumpFactor;
+		else
+			jump = (res.w + nearFarCutoff) * farJumpFactor - nearFarCutoff * nearJumpFactor;
 		currPos += pixDir * jump;
 		dist += jump;
 	}
